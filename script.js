@@ -1,4 +1,3 @@
-// -------- Firebase config --------
 const firebaseConfig = {
   apiKey: "AIzaSyBghqjVi0Eci-lLlaVvU6N2EbHGzzpuzzk",
   authDomain: "live-typing1.firebaseapp.com",
@@ -11,111 +10,119 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 
-let room = '';
-let username = '';
-let owner = false;
-const ownerPwVal = 'tuffyisnotwuffy67little67massiveignorancehumansarenotkillingalienasquannguyenvan9157&&&$!@####)))()|||}{""":>...........';
+let uid = null;
+let username = null;
+let room = null;
+let myRef = null;
 
-const joinBtn = document.getElementById('joinBtn');
-const roomInput = document.getElementById('room');
-const customName = document.getElementById('customName');
-const app = document.getElementById('app');
-const join = document.getElementById('join');
-const input = document.getElementById('input');
-const streams = document.getElementById('streams');
-const clearBtn = document.getElementById('clearBtn');
-const roomName = document.getElementById('roomName');
-const ownerPw = document.getElementById('ownerPw');
-const gSignInBtn = document.getElementById('gSignInBtn');
+const joinBtn = document.getElementById("joinBtn");
+const customName = document.getElementById("customName");
+const roomInput = document.getElementById("room");
+const app = document.getElementById("app");
+const join = document.getElementById("join");
+const input = document.getElementById("input");
+const roomName = document.getElementById("roomName");
+const streams = document.getElementById("streams");
+const ownerPw = document.getElementById("ownerPw");
 
-let userId = Math.random().toString(36).substr(2, 8);
-
-// -------- Google Sign-In --------
-window.onload = function() {
+// google sign-in button
+function renderGoogleBtn() {
   google.accounts.id.initialize({
-    client_id: "YOUR_GOOGLE_CLIENT_ID",
-    callback: handleCredentialResponse
+    client_id: "673667397761-96h9gkgp6t0c0c2f69lfpp32jrbtk6q0.apps.googleusercontent.com",
+    callback: handleGoogleLogin
   });
+
   google.accounts.id.renderButton(
-    gSignInBtn,
-    { theme: 'outline', size: 'large', text: 'signin_with' }
+    document.getElementById("gSignInBtn"),
+    { theme: "filled_blue", size: "medium" }
   );
-};
-
-function handleCredentialResponse(response) {
-  const payload = parseJwt(response.credential);
-  username = payload.given_name || payload.name || 'Guest';
-  joinRoom();
 }
 
-function parseJwt(token) {
-  const base64Url = token.split('.')[1];
-  const base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
-  return JSON.parse(atob(base64));
+renderGoogleBtn();
+
+// handle google login
+function handleGoogleLogin(res) {
+  const credential = firebase.auth.GoogleAuthProvider.credential(res.credential);
+  auth.signInWithCredential(credential).then(user => {
+    uid = user.user.uid;
+    username = user.user.displayName;
+  });
 }
 
-// -------- Join Room --------
-function joinRoom() {
+joinBtn.onclick = () => {
   room = roomInput.value.trim();
   if (!room) return;
-  if (!username) username = customName.value.trim() || 'Guest';
+
+  if (!uid) {
+    uid = Math.random().toString(36).slice(2, 10);
+    username = customName.value.trim() || "anon";
+  }
+
   join.hidden = true;
   app.hidden = false;
   roomName.textContent = room;
 
-  const roomRef = db.ref('rooms/' + room + '/users/' + userId);
-  roomRef.set({ username, text: '' });
-  roomRef.onDisconnect().remove();
+  myRef = db.ref("rooms/" + room + "/" + uid);
+  myRef.set({
+    user: username,
+    text: ""
+  });
 
-  listenRoom();
-}
+  myRef.onDisconnect().remove();
 
-// -------- Listen Room --------
-function listenRoom() {
-  const usersRef = db.ref('rooms/' + room + '/users');
-  usersRef.on('value', snapshot => {
-    streams.innerHTML = '';
-    const users = snapshot.val() || {};
-    for (const uid in users) {
-      const u = users[uid];
-      const el = document.createElement('div');
-      el.className = 'stream';
-      const title = document.createElement('div');
-      title.className = 'title';
-      title.textContent = uid === userId ? 'you' : u.username;
-      const content = document.createElement('pre');
-      content.className = 'content';
-      content.textContent = u.text || '';
-      el.appendChild(title);
-      el.appendChild(content);
-      streams.appendChild(el);
-    }
+  watchRoom(room);
+};
+
+function watchRoom(r) {
+  db.ref("rooms/" + r).on("value", snap => {
+    streams.innerHTML = "";
+
+    const data = snap.val();
+    if (!data) return;
+
+    Object.keys(data).forEach(id => {
+      const item = data[id];
+
+      const div = document.createElement("div");
+      div.className = "stream";
+
+      const title = document.createElement("div");
+      title.className = "title";
+      title.textContent = item.user;
+
+      const content = document.createElement("pre");
+      content.className = "content";
+      content.textContent = item.text || "";
+
+      div.appendChild(title);
+      div.appendChild(content);
+      streams.appendChild(div);
+    });
   });
 }
 
-// -------- Typing --------
-input.addEventListener('input', () => {
-  const txt = input.value;
-  db.ref('rooms/' + room + '/users/' + userId).update({ text: txt });
+input.addEventListener("input", () => {
+  if (myRef) {
+    myRef.update({ text: input.value });
+  }
 });
 
-// -------- Clear own --------
-clearBtn.addEventListener('click', () => {
-  input.value = '';
-  db.ref('rooms/' + room + '/users/' + userId).update({ text: '' });
-});
+// clear button
+document.getElementById("clearBtn").onclick = () => {
+  input.value = "";
+  if (myRef) myRef.update({ text: "" });
+};
 
-// -------- Owner password --------
-ownerPw.addEventListener('change', () => {
-  if (ownerPw.value === ownerPwVal) {
-    owner = true;
-    const btn = document.createElement('button');
-    btn.textContent = 'clear all';
-    btn.id = 'ownerClear';
-    btn.onclick = () => db.ref('rooms/' + room + '/users').remove();
-    document.getElementById('container').appendChild(btn);
-  } else {
-    ownerPw.value = '';
+// secret owner clear
+ownerPw.addEventListener("input", () => {
+  if (ownerPw.value === "clearall") {
+    if (room) {
+      db.ref("rooms/" + room).remove();
+      input.value = "";
+      streams.innerHTML = "";
+    }
+    ownerPw.value = "";
   }
 });
