@@ -1,9 +1,12 @@
 // -------- Firebase config --------
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID"
+  apiKey: "AIzaSyBghqjVi0Eci-lLlaVvU6N2EbHGzzpuzzk",
+  authDomain: "live-typing1.firebaseapp.com",
+  databaseURL: "https://live-typing1-default-rtdb.firebaseio.com",
+  projectId: "live-typing1",
+  storageBucket: "live-typing1.firebasestorage.app",
+  messagingSenderId: "673667397761",
+  appId: "1:673667397761:web:39cda5edd647db54eaf580"
 };
 
 firebase.initializeApp(firebaseConfig);
