@@ -1,43 +1,46 @@
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>live typing rooms</title>
-<link rel="stylesheet" href="style.css" />
+* { box-sizing: border-box; font-family: system-ui,Segoe UI,Roboto,Arial; }
+body { margin:0; background:#0f172a; color:#e6eef8; height:100vh; display:flex; align-items:center; justify-content:center; }
+#container { width:920px; max-width:95%; background:#071029; padding:18px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.6); position:relative; }
+#join { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+#room { padding:8px; flex:1; border-radius:6px; border:1px solid #123; background:#071229; color:#eef; }
+#joinBtn { padding:8px 12px; border-radius:6px; background:#0b74ff; color:#fff; border:none; cursor:pointer; }
+#app { display:flex; gap:12px; }
+#me { flex:1; display:flex; flex-direction:column; gap:8px; }
+#input { width:100%; height:220px; padding:12px; border-radius:8px; border:1px solid #123; background:#051226; color:#fff; resize:vertical; }
+#live { width:420px; max-width:45%; background:#07172a; padding:10px; border-radius:8px; overflow:auto; }
+.stream { border-bottom:1px solid rgba(255,255,255,0.03); padding:8px 0; }
+.title { font-size:13px; opacity:0.9; margin-bottom:6px; }
+.content { white-space:pre-wrap; word-break:break-word; margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-<script src="https://www.gstatic.com/firebasejs/10.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.6.1/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.6.1/firebase-auth-compat.js"></script>
-
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-</head>
-<body>
-
-<div id="container">
-    <div id="join">
-        <input id="customName" placeholder="username (optional)" autocomplete="off" />
-        <input id="room" placeholder="room name" autocomplete="off" />
-        <button id="joinBtn">join</button>
-
-        <div id="gSignInBtn">sign in with google</div>
-    </div>
-
-    <div id="app" hidden>
-        <div id="me">
-            <textarea id="input" placeholder="type here..."></textarea>
-            <button id="clearBtn">clear</button>
-        </div>
-
-        <div id="live">
-            <h3>room <span id="roomName"></span></h3>
-            <div id="streams"></div>
-        </div>
-    </div>
-
-    <input type="password" id="ownerPw" placeholder="•••" />
-</div>
-
-<script src="script.js"></script>
-</body>
-</html>
+#ownerPw {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: #fff;
+  transition: opacity 0.2s;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+}
+#ownerPw:hover, #ownerPw:focus {
+  opacity: 0.5;
+  width: 120px;
+  height: auto;
+  background: #0003;
+  border-radius: 6px;
+  padding: 4px;
+  outline: none;
+}
+#ownerClear {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding:6px 8px;
+  border-radius:6px;
+  background:#ff6b6b;
+  border:none;
+  cursor:pointer;
+}
