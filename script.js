@@ -4,7 +4,7 @@ const firebaseConfig = {
   authDomain: "live-typing1.firebaseapp.com",
   databaseURL: "https://live-typing1-default-rtdb.firebaseio.com",
   projectId: "live-typing1",
-}
+};
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -12,7 +12,9 @@ const db = firebase.database();
 let room = '';
 let username = '';
 let owner = false;
-const ownerPwVal = `tuffyisnotwuffy67little67massiveignorancehumansarenotkillingalienasquannguyenvan9157&&&$!@####)))()|||}{""":>...........`;
+
+// safely escaped owner password
+const ownerPwVal = "tuffyisnotwuffy67little67massiveignorancehumansarenotkillingalienasquannguyenvan9157&&&$!@####)))()|||}{\"\"\":>...........";
 
 const joinBtn = document.getElementById('joinBtn');
 const roomInput = document.getElementById('room');
@@ -29,7 +31,7 @@ const gSignInBtn = document.getElementById('gSignInBtn');
 let userId = Math.random().toString(36).substr(2, 8);
 
 // -------- Google Sign-In --------
-window.onload = function() {
+window.onload = function () {
   google.accounts.id.initialize({
     client_id: "988642885375-da5mgubj08fp7113tpi443nvdepobkvb.apps.googleusercontent.com",
     callback: handleCredentialResponse
@@ -48,7 +50,7 @@ function handleCredentialResponse(response) {
 
 function parseJwt(token) {
   const base64Url = token.split('.')[1];
-  const base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
   return JSON.parse(atob(base64));
 }
 
