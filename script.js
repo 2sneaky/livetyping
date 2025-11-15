@@ -1,5 +1,3 @@
-console.log("firebase:", firebase)
-
 const firebaseConfig = {
   apiKey: "AIzaSyBghqjVi0Eci-lLlaVvU6N2EbHGzzpuzzk",
   authDomain: "live-typing1.firebaseapp.com",
@@ -11,109 +9,52 @@ const firebaseConfig = {
 }
 
 firebase.initializeApp(firebaseConfig)
+
 const db = firebase.database()
 
-let myId = null
-let roomRef = null
-let input = null
-let streamsDiv = null
-let roomNameEl = null
-let ownerPwEl = null
+const joinBtn = document.getElementById("joinBtn")
+const input = document.getElementById("input")
+const roomNameDisplay = document.getElementById("roomName")
+const streams = document.getElementById("streams")
+const app = document.getElementById("app")
+const join = document.getElementById("join")
+let currentRoom = ""
+let currentUser = ""
 
-window.onload = () => {
-  input = document.getElementById("input")
-  streamsDiv = document.getElementById("streams")
-  roomNameEl = document.getElementById("roomName")
-  ownerPwEl = document.getElementById("ownerPw")
-
-  document.getElementById("joinBtn").onclick = joinRoom
-  document.getElementById("clearBtn").onclick = () => input.value = ""
-
-  window.addEventListener("beforeunload", leaveRoom)
-}
-
-function joinRoom() {
-  const customName = document.getElementById("customName").value.trim()
+joinBtn.onclick = () => {
+  const username = document.getElementById("customName").value.trim()
   const room = document.getElementById("room").value.trim().toLowerCase()
 
   if (!room) return
 
-  myId = crypto.randomUUID()
-  roomRef = db.ref("rooms/" + room)
-  roomNameEl.textContent = room
+  currentRoom = room
+  currentUser = username || "guest" + Math.floor(Math.random() * 9999)
 
-  document.getElementById("join").hidden = true
-  document.getElementById("app").hidden = false
+  roomNameDisplay.textContent = room
+  join.hidden = true
+  app.hidden = false
 
-  const userRef = roomRef.child("users/" + myId)
+  db.ref("rooms/" + room + "/" + currentUser).set("")
 
-  userRef.onDisconnect().remove()
-
-  userRef.set({
-    name: customName || ("user-" + myId.substring(0, 4)),
-    text: ""
-  })
-
-  input.addEventListener("input", () => {
-    userRef.update({ text: input.value })
-  })
-
-  roomRef.child("users").on("value", snap => {
-    const users = snap.val() || {}
-    updateStreams(users)
-  })
-
-  setupOwnerControls(room)
-}
-
-function updateStreams(users) {
-  streamsDiv.innerHTML = ""
-
-  Object.entries(users).forEach(([id, data]) => {
-    if (id === myId) return
-
-    const stream = document.createElement("div")
-    stream.className = "stream"
-
-    const title = document.createElement("div")
-    title.className = "title"
-    title.textContent = data.name
-
-    const content = document.createElement("pre")
-    content.className = "content"
-    content.textContent = data.text || ""
-
-    stream.appendChild(title)
-    stream.appendChild(content)
-    streamsDiv.appendChild(stream)
+  db.ref("rooms/" + room).on("value", snap => {
+    const data = snap.val() || {}
+    streams.innerHTML = ""
+    Object.keys(data).forEach(user => {
+      const p = document.createElement("p")
+      p.textContent = user + ": " + data[user]
+      streams.appendChild(p)
+    })
   })
 }
 
-function leaveRoom() {
-  if (!roomRef || !myId) return
-  roomRef.child("users/" + myId).remove()
+input.oninput = () => {
+  if (!currentRoom || !currentUser) return
+  db.ref("rooms/" + currentRoom + "/" + currentUser).set(input.value)
 }
 
-function setupOwnerControls(room) {
-  ownerPwEl.oninput = () => {
-    const pw = ownerPwEl.value.trim()
-    if (pw === "owner123") {
-      addOwnerClearButton(room)
-    }
+document.getElementById("clearBtn").onclick = () => {
+  input.value = ""
+  if (currentRoom && currentUser) {
+    db.ref("rooms/" + currentRoom + "/" + currentUser).set("")
   }
-}
-
-function addOwnerClearButton(room) {
-  if (document.getElementById("ownerClear")) return
-
-  const btn = document.createElement("button")
-  btn.id = "ownerClear"
-  btn.textContent = "clear room"
-
-  btn.onclick = () => {
-    db.ref("rooms/" + room + "/users").set({})
-    input.value = ""
-  }
-
-  document.body.appendChild(btn)
 }
