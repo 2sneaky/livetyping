@@ -1,58 +1,43 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyBghqjVi0Eci-lLlaVvU6N2EbHGzzpuzzk",
-  authDomain: "live-typing1.firebaseapp.com",
-  databaseURL: "https://live-typing1-default-rtdb.firebaseio.com",
-  projectId: "live-typing1",
-  storageBucket: "live-typing1.firebasestorage.app",
-  messagingSenderId: "673667397761",
-  appId: "1:673667397761:web:39cda5edd647db54eaf580"
-}
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>live typing rooms</title>
+<link rel="stylesheet" href="style.css" />
 
-firebase.initializeApp(firebaseConfig)
+<script src="https://www.gstatic.com/firebasejs/10.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.6.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.6.1/firebase-auth-compat.js"></script>
 
-const db = firebase.database()
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
 
-const joinBtn = document.getElementById("joinBtn")
-const roomInput = document.getElementById("room")
-const customNameInput = document.getElementById("customName")
-const app = document.getElementById("app")
-const joinScreen = document.getElementById("join")
-const roomNameText = document.getElementById("roomName")
-const input = document.getElementById("input")
-const streams = document.getElementById("streams")
-const clearBtn = document.getElementById("clearBtn")
+<div id="container">
+    <div id="join">
+        <input id="customName" placeholder="username (optional)" autocomplete="off" />
+        <input id="room" placeholder="room name" autocomplete="off" />
+        <button id="joinBtn">join</button>
 
-let room = ""
-let user = ""
+        <div id="gSignInBtn">sign in with google</div>
+    </div>
 
-joinBtn.onclick = () => {
-    room = roomInput.value.trim()
-    if (!room) return
-    user = customNameInput.value.trim() || ("user" + Math.floor(Math.random()*9999))
-    roomNameText.textContent = room
-    joinScreen.hidden = true
-    app.hidden = false
-    listen()
-}
+    <div id="app" hidden>
+        <div id="me">
+            <textarea id="input" placeholder="type here..."></textarea>
+            <button id="clearBtn">clear</button>
+        </div>
 
-input.oninput = () => {
-    if (!room || !user) return
-    db.ref("rooms/" + room + "/" + user).set(input.value)
-}
+        <div id="live">
+            <h3>room <span id="roomName"></span></h3>
+            <div id="streams"></div>
+        </div>
+    </div>
 
-clearBtn.onclick = () => {
-    input.value = ""
-    db.ref("rooms/" + room + "/" + user).set("")
-}
+    <input type="password" id="ownerPw" placeholder="•••" />
+</div>
 
-function listen() {
-    db.ref("rooms/" + room).on("value", snap => {
-        const data = snap.val() || {}
-        streams.innerHTML = ""
-        Object.keys(data).forEach(name => {
-            const div = document.createElement("div")
-            div.textContent = name + ": " + data[name]
-            streams.appendChild(div)
-        })
-    })
-}
+<script src="script.js"></script>
+</body>
+</html>
