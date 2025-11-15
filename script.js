@@ -6,123 +6,53 @@ const firebaseConfig = {
   storageBucket: "live-typing1.firebasestorage.app",
   messagingSenderId: "673667397761",
   appId: "1:673667397761:web:39cda5edd647db54eaf580"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
-
-let uid = null;
-let username = null;
-let room = null;
-let myRef = null;
-
-const joinBtn = document.getElementById("joinBtn");
-const customName = document.getElementById("customName");
-const roomInput = document.getElementById("room");
-const app = document.getElementById("app");
-const join = document.getElementById("join");
-const input = document.getElementById("input");
-const roomName = document.getElementById("roomName");
-const streams = document.getElementById("streams");
-const ownerPw = document.getElementById("ownerPw");
-
-// google sign-in button
-function renderGoogleBtn() {
-  google.accounts.id.initialize({
-    client_id: "673667397761-96h9gkgp6t0c0c2f69lfpp32jrbtk6q0.apps.googleusercontent.com",
-    callback: handleGoogleLogin
-  });
-
-  google.accounts.id.renderButton(
-    document.getElementById("gSignInBtn"),
-    { theme: "filled_blue", size: "medium" }
-  );
 }
 
-renderGoogleBtn();
+firebase.initializeApp(firebaseConfig)
 
-// handle google login
-function handleGoogleLogin(res) {
-  const credential = firebase.auth.GoogleAuthProvider.credential(res.credential);
-  auth.signInWithCredential(credential).then(user => {
-    uid = user.user.uid;
-    username = user.user.displayName;
-  });
-}
+const db = firebase.database()
+
+const joinBtn = document.getElementById("joinBtn")
+const roomInput = document.getElementById("room")
+const customNameInput = document.getElementById("customName")
+const app = document.getElementById("app")
+const joinScreen = document.getElementById("join")
+const roomNameText = document.getElementById("roomName")
+const input = document.getElementById("input")
+const streams = document.getElementById("streams")
+const clearBtn = document.getElementById("clearBtn")
+
+let room = ""
+let user = ""
 
 joinBtn.onclick = () => {
-  room = roomInput.value.trim();
-  if (!room) return;
-
-  if (!uid) {
-    uid = Math.random().toString(36).slice(2, 10);
-    username = customName.value.trim() || "anon";
-  }
-
-  join.hidden = true;
-  app.hidden = false;
-  roomName.textContent = room;
-
-  myRef = db.ref("rooms/" + room + "/" + uid);
-  myRef.set({
-    user: username,
-    text: ""
-  });
-
-  myRef.onDisconnect().remove();
-
-  watchRoom(room);
-};
-
-function watchRoom(r) {
-  db.ref("rooms/" + r).on("value", snap => {
-    streams.innerHTML = "";
-
-    const data = snap.val();
-    if (!data) return;
-
-    Object.keys(data).forEach(id => {
-      const item = data[id];
-
-      const div = document.createElement("div");
-      div.className = "stream";
-
-      const title = document.createElement("div");
-      title.className = "title";
-      title.textContent = item.user;
-
-      const content = document.createElement("pre");
-      content.className = "content";
-      content.textContent = item.text || "";
-
-      div.appendChild(title);
-      div.appendChild(content);
-      streams.appendChild(div);
-    });
-  });
+    room = roomInput.value.trim()
+    if (!room) return
+    user = customNameInput.value.trim() || ("user" + Math.floor(Math.random()*9999))
+    roomNameText.textContent = room
+    joinScreen.hidden = true
+    app.hidden = false
+    listen()
 }
 
-input.addEventListener("input", () => {
-  if (myRef) {
-    myRef.update({ text: input.value });
-  }
-});
+input.oninput = () => {
+    if (!room || !user) return
+    db.ref("rooms/" + room + "/" + user).set(input.value)
+}
 
-// clear button
-document.getElementById("clearBtn").onclick = () => {
-  input.value = "";
-  if (myRef) myRef.update({ text: "" });
-};
+clearBtn.onclick = () => {
+    input.value = ""
+    db.ref("rooms/" + room + "/" + user).set("")
+}
 
-// secret owner clear
-ownerPw.addEventListener("input", () => {
-  if (ownerPw.value === "clearall") {
-    if (room) {
-      db.ref("rooms/" + room).remove();
-      input.value = "";
-      streams.innerHTML = "";
-    }
-    ownerPw.value = "";
-  }
-});
+function listen() {
+    db.ref("rooms/" + room).on("value", snap => {
+        const data = snap.val() || {}
+        streams.innerHTML = ""
+        Object.keys(data).forEach(name => {
+            const div = document.createElement("div")
+            div.textContent = name + ": " + data[name]
+            streams.appendChild(div)
+        })
+    })
+}
