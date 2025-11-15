@@ -1,4 +1,5 @@
-// firebase config
+console.log("firebase:", firebase)
+
 const firebaseConfig = {
   apiKey: "AIzaSyBghqjVi0Eci-lLlaVvU6N2EbHGzzpuzzk",
   authDomain: "live-typing1.firebaseapp.com",
