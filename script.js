@@ -6,8 +6,17 @@ const firebaseConfig = {
   projectId: "live-typing1",
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+let db = null;
+
+function initFirebase() {
+  const sdk = window.firebase;
+  if (!sdk) {
+    console.error('Firebase SDK failed to load.');
+    return;
+  }
+  sdk.initializeApp(firebaseConfig);
+  db = sdk.database();
+}
 
 let room = '';
 let username = '';
@@ -29,6 +38,9 @@ const ownerPw = document.getElementById('ownerPw');
 const gSignInBtn = document.getElementById('gSignInBtn');
 
 let userId = Math.random().toString(36).substr(2, 8);
+let hasJoined = false;
+
+window.addEventListener('load', initFirebase);
 
 // -------- Google Sign-In --------
 window.onload = function () {
@@ -56,9 +68,15 @@ function parseJwt(token) {
 
 // -------- Join Room --------
 function joinRoom() {
+  if (hasJoined) return;
+  if (!db) {
+    alert('Please wait for Firebase to finish loading.');
+    return;
+  }
   room = roomInput.value.trim();
   if (!room) return;
   if (!username) username = customName.value.trim() || 'Guest';
+  hasJoined = true;
   join.hidden = true;
   app.hidden = false;
   roomName.textContent = room;
@@ -104,6 +122,14 @@ clearBtn.addEventListener('click', () => {
   input.value = '';
   db.ref('rooms/' + room + '/users/' + userId).update({ text: '' });
 });
+
+// -------- Join button + keyboard --------
+joinBtn.addEventListener('click', joinRoom);
+[roomInput, customName].forEach((el) =>
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') joinRoom();
+  })
+);
 
 // -------- Owner password --------
 ownerPw.addEventListener('change', () => {
