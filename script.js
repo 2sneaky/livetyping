@@ -37,6 +37,118 @@ function setStatus(message, isError = false) {
   statusBox.style.color = isError ? '#ff9494' : '#f1b34d';
 }
 
+// -------- Local fallback (when Firebase is blocked) --------
+function createLocalDb() {
+  console.warn('Firebase has not loaded; using local fallback.');
+  const storeKey = 'ltRooms';
+  const listeners = {};
+
+  function normalize(path) {
+    return path.replace(/^\/+|\/+$/g, '');
+  }
+
+  function snapshotFor(value) {
+    return { val: () => value };
+  }
+
+  function readState() {
+    try {
+      return JSON.parse(localStorage.getItem(storeKey) || '{}');
+    } catch (e) {
+      console.warn('Resetting local cache after parse error', e);
+      return {};
+    }
+  }
+
+  let state = readState();
+
+  function persist() {
+    localStorage.setItem(storeKey, JSON.stringify(state));
+    notify();
+  }
+
+  function notify() {
+    Object.entries(listeners).forEach(([path, cbs]) => {
+      const value = getAtPath(path);
+      const snap = snapshotFor(value);
+      cbs.forEach((cb) => cb(snap));
+    });
+  }
+
+  function getAtPath(path) {
+    if (!path) return state;
+    return normalize(path)
+      .split('/')
+      .reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), state);
+  }
+
+  function setAtPath(path, value) {
+    const keys = normalize(path).split('/');
+    let cursor = state;
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i];
+      cursor[key] = cursor[key] || {};
+      cursor = cursor[key];
+    }
+    cursor[keys[keys.length - 1]] = value;
+  }
+
+  function removeAtPath(path) {
+    const keys = normalize(path).split('/');
+    let cursor = state;
+    for (let i = 0; i < keys.length - 1; i++) {
+      cursor = cursor[keys[i]];
+      if (!cursor) return;
+    }
+    if (cursor) delete cursor[keys[keys.length - 1]];
+  }
+
+  function ref(path) {
+    const normalized = normalize(path);
+    return {
+      set(value) {
+        setAtPath(normalized, value);
+        persist();
+      },
+      update(value) {
+        const current = getAtPath(normalized);
+        const base = typeof current === 'object' && current !== null ? current : {};
+        setAtPath(normalized, { ...base, ...value });
+        persist();
+      },
+      remove() {
+        removeAtPath(normalized);
+        persist();
+      },
+      on(event, cb) {
+        if (event !== 'value') return;
+        listeners[normalized] = listeners[normalized] || [];
+        listeners[normalized].push(cb);
+        cb(snapshotFor(getAtPath(normalized)));
+        return () => {
+          listeners[normalized] = (listeners[normalized] || []).filter((fn) => fn !== cb);
+        };
+      },
+      onDisconnect() {
+        return {
+          remove() {
+            window.addEventListener(
+              'beforeunload',
+              () => {
+                removeAtPath(normalized);
+                persist();
+              },
+              { once: true }
+            );
+          }
+        };
+      }
+    };
+  }
+
+  return { ref };
+}
+
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${src}"]`);
@@ -84,9 +196,10 @@ async function initFirebase() {
     setStatus('');
     return db;
   } catch (err) {
-    console.error('Firebase failed to load:', err);
-    setStatus('Firebase could not load. Check your connection or unblock gstatic.com.', true);
-    return null;
+    console.warn('Firebase has not loaded; switching to local mode.', err);
+    db = createLocalDb();
+    setStatus('');
+    return db;
   }
 }
 
@@ -121,13 +234,7 @@ function parseJwt(token) {
 // -------- Join Room --------
 async function joinRoom() {
   if (hasJoined) return;
-  if (!db) {
-    await firebaseReady;
-  }
-  if (!db) {
-    alert('Firebase is still loading or failed to load.');
-    return;
-  }
+  if (!db) await firebaseReady;
   room = roomInput.value.trim();
   if (!room) return;
   if (!username) username = customName.value.trim() || 'Guest';
