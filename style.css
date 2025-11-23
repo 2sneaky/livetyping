@@ -4,6 +4,7 @@ body { margin:0; background:#0f172a; color:#e6eef8; height:100vh; display:flex; 
 #join { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
 #room, #customName { padding:8px; flex:1; border-radius:6px; border:1px solid #123; background:#071229; color:#eef; }
 #joinBtn { padding:8px 12px; border-radius:6px; background:#0b74ff; color:#fff; border:none; cursor:pointer; }
+#status { margin-bottom: 8px; min-height: 18px; color: #f1b34d; font-size: 14px; }
 #app { display:flex; gap:12px; flex-wrap:wrap; }
 #me { flex:1; display:flex; flex-direction:column; gap:8px; }
 #input { width:100%; height:220px; padding:12px; border-radius:8px; border:1px solid #123; background:#051226; color:#fff; resize:vertical; }

@@ -1,14 +1,3 @@
-// -------- Firebase config --------
-const firebaseConfig = {
-  apiKey: "AIzaSyBghqjVi0Eci-lLlaVvU6N2EbHGzzpuzzk",
-  authDomain: "live-typing1.firebaseapp.com",
-  databaseURL: "https://live-typing1-default-rtdb.firebaseio.com",
-  projectId: "live-typing1",
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
 let room = '';
 let username = '';
 let owner = false;
@@ -27,20 +16,95 @@ const clearBtn = document.getElementById('clearBtn');
 const roomName = document.getElementById('roomName');
 const ownerPw = document.getElementById('ownerPw');
 const gSignInBtn = document.getElementById('gSignInBtn');
+const statusBox = document.getElementById('status');
 
 let userId = Math.random().toString(36).substr(2, 8);
+let hasJoined = false;
+
+// -------- Firebase config + loader --------
+const firebaseConfig = {
+  apiKey: "AIzaSyBghqjVi0Eci-lLlaVvU6N2EbHGzzpuzzk",
+  authDomain: "live-typing1.firebaseapp.com",
+  databaseURL: "https://live-typing1-default-rtdb.firebaseio.com",
+  projectId: "live-typing1",
+};
+
+let db = null;
+let firebaseReady;
+
+function setStatus(message, isError = false) {
+  statusBox.textContent = message;
+  statusBox.style.color = isError ? '#ff9494' : '#f1b34d';
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing && existing.dataset.loaded === '1') {
+      resolve();
+      return;
+    }
+
+    const el = existing || document.createElement('script');
+    el.src = src;
+    el.async = true;
+    el.dataset.loaded = '0';
+    el.onload = () => {
+      el.dataset.loaded = '1';
+      resolve();
+    };
+    el.onerror = () => reject(new Error(`Failed to load ${src}`));
+    if (!existing) document.head.appendChild(el);
+  });
+}
+
+async function initFirebase() {
+  if (db) return db;
+
+  if (window.firebase) {
+    window.firebase.initializeApp(firebaseConfig);
+    db = window.firebase.database();
+    setStatus('');
+    return db;
+  }
+
+  try {
+    setStatus('Loading Firebase...');
+    const sources = [
+      'https://www.gstatic.com/firebasejs/10.6.1/firebase-app-compat.js',
+      'https://www.gstatic.com/firebasejs/10.6.1/firebase-database-compat.js',
+      'https://www.gstatic.com/firebasejs/10.6.1/firebase-auth-compat.js'
+    ];
+    for (const src of sources) {
+      await loadScript(src);
+    }
+    if (!window.firebase) throw new Error('Firebase SDK unavailable');
+    window.firebase.initializeApp(firebaseConfig);
+    db = window.firebase.database();
+    setStatus('');
+    return db;
+  } catch (err) {
+    console.error('Firebase failed to load:', err);
+    setStatus('Firebase could not load. Check your connection or unblock gstatic.com.', true);
+    return null;
+  }
+}
+
+firebaseReady = initFirebase();
 
 // -------- Google Sign-In --------
-window.onload = function () {
-  google.accounts.id.initialize({
+window.addEventListener('load', () => {
+  const g = window.google;
+  if (!g?.accounts?.id) return;
+  g.accounts.id.initialize({
     client_id: "988642885375-da5mgubj08fp7113tpi443nvdepobkvb.apps.googleusercontent.com",
     callback: handleCredentialResponse
   });
-  google.accounts.id.renderButton(
+  g.accounts.id.renderButton(
     gSignInBtn,
     { theme: 'outline', size: 'large', text: 'signin_with' }
   );
-};
+});
 
 function handleCredentialResponse(response) {
   const payload = parseJwt(response.credential);
@@ -55,10 +119,19 @@ function parseJwt(token) {
 }
 
 // -------- Join Room --------
-function joinRoom() {
+async function joinRoom() {
+  if (hasJoined) return;
+  if (!db) {
+    await firebaseReady;
+  }
+  if (!db) {
+    alert('Firebase is still loading or failed to load.');
+    return;
+  }
   room = roomInput.value.trim();
   if (!room) return;
   if (!username) username = customName.value.trim() || 'Guest';
+  hasJoined = true;
   join.hidden = true;
   app.hidden = false;
   roomName.textContent = room;
@@ -104,6 +177,14 @@ clearBtn.addEventListener('click', () => {
   input.value = '';
   db.ref('rooms/' + room + '/users/' + userId).update({ text: '' });
 });
+
+// -------- Join button + keyboard --------
+joinBtn.addEventListener('click', joinRoom);
+[roomInput, customName].forEach((el) =>
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') joinRoom();
+  })
+);
 
 // -------- Owner password --------
 ownerPw.addEventListener('change', () => {
